@@ -22,6 +22,17 @@ setup_from_labeled_event() {
   PR_TITLE=$(jq -r '.pull_request.title' < "${GITHUB_EVENT_PATH}")
 }
 
+# Setup a pull request event
+# - LABELS
+# - PR_NUMBER
+# - PR_TITLE
+setup_from_pull_request_event() {
+  echo "Running pull request event"
+  LABELS=$(jq '.pull_request.labels | .[].name' < "${GITHUB_EVENT_PATH}")
+  PR_NUMBER=$(jq -r '.pull_request.number' < "${GITHUB_EVENT_PATH}")
+  PR_TITLE=$(jq -r '.pull_request.title' < "${GITHUB_EVENT_PATH}")
+}
+
 # Setup these env variables.
 # - LABELS
 # - PR_NUMBER
@@ -89,8 +100,11 @@ post_warning() {
 
 # Get labels and Pull Request data.
 ACTION=$(jq -r '.action' < "${GITHUB_EVENT_PATH}" )
+echo "ACTION is ${ACTION}"
 if [ "${ACTION}" = "labeled" ]; then
   setup_from_labeled_event
+elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+  setup_from_pull_request_event
 else
   setup_from_push_event
 fi
@@ -150,7 +164,9 @@ if [ "${INPUT_DRY_RUN}" = "true" ]; then
   exit
 fi
 
-if [ "${ACTION}" = "labeled" ]; then
+
+# only tag on push events not pull_request
+if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
   post_pre_status
 else
   # Set up Git.
